@@ -4,6 +4,8 @@ A simple 2D sandbox with simple physics and a GitHub generated name
 ## What this is
 This is a sandbox with a physics engine all in one html file.
 
+[Go to the GitHub Pages site to use](https://fianalins.github.io/congenial-goggles-2D-Sandbox/)
+
 ## What it contains
 4 simple shapes,
 
