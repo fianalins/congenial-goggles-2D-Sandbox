@@ -7,12 +7,19 @@ This is a sandbox with a physics engine all in one html file.
 [Go to the GitHub Pages site to use](https://fianalins.github.io/congenial-goggles-2D-Sandbox/)
 
 ## What it contains
-4 simple shapes,
+11 shapes,
 
 1. Circle
 2. Square
 3. Rectangle
 4. Triangle
+5. Star
+6. Pentagon
+7. Hexagon
+8. Heptagon
+9. Octagon
+10. Nonagon
+11. Decagon
 
 properties for the objects,
 
@@ -21,12 +28,14 @@ properties for the objects,
 3. Bounciness
 4. Friction
 
-and 4 different tools.
+4 different tools,
 
 1. Weld Toggle
 2. Unweld Toggle
 3. Delete Toggle
 4. Clear all
+
+and a gravity slider in the options tab (more to come maybe).
 
 ## What it is for
 To see how to code in something other than Lua and Flixel for once.
@@ -49,11 +58,6 @@ To remove the highlight, click the object again.
 Sometimes, when freezing an object, then selecting a different object, the frozen object will stay highlighted green even though it is not selected.
 
 To fix this, click the object again, then it will return to blue.
-
-### Wall Borders
-Probably due to the way I made it, the walls don't scale properly when pressing the maximize button.
-
-This works fine with resizing the window normally.
 
 ## Credit(s)
 Programmer - fianalins (me)

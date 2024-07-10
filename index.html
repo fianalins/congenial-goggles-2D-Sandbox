@@ -6,8 +6,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Physics Sandbox</title>
+    <title>congenial-goggles 2D Sandbox</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="decomp.js" type="text/javascript"></script>
     <style>
         body, html {
             margin: 0;
@@ -24,7 +25,7 @@
         }
         #controls {
             position: absolute;
-            top: -200px; /* Start off-screen */
+            top: -300px; /* Start off-screen */
             left: 0;
             right: 0;
             background: rgba(40, 40, 40, 0.7);
@@ -57,6 +58,40 @@
         .tab-content.active {
             display: block;
         }
+        #objects-tab.active {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+        #objects-tab button {
+            width: 100%;
+            height: 40px;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #tools-tab.active {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+        }
+        #tools-tab button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            padding: 0 15px;
+        }
+        .tool-container {
+            display: flex;
+            align-items: center;
+        }
+        .mode-indicator {
+            margin-left: 5px;
+        }
         #property-controls {
             position: absolute;
             top: 50%;
@@ -71,21 +106,36 @@
         #property-controls.visible {
             right: 0;
         }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .slider-container input[type="range"] {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .slider-value {
+            width: 40px;
+            text-align: right;
+        }
         #bounciness-warning {
-            display: none;
             position: absolute;
+            bottom: -20px;
+            left: 0;
+            right: 0;
             background-color: #FFFF87;
             color: #000;
             padding: 5px 10px;
-            border-radius: 5px;
+            border-radius: 0 0 5px 5px;
             font-size: 12px;
-            margin-top: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: bottom 0.3s ease-in-out;
+            opacity: 0;
         }
-        /* Add a transition for smooth fade in/out */
         #bounciness-warning.visible {
-            display: block;
-            animation: fadeIn 0.3s;
+            bottom: -35px;
+            opacity: 1;
         }
         .mode-indicator {
             display: inline-block;
@@ -98,9 +148,15 @@
         .mode-indicator.active {
             background-color: #07EDA2;
         }
+        .slider-value {
+            display: inline-block;
+            width: 50px;
+            text-align: right;
+            margin-left: 10px;
+        }
         #toggle-controls {
             position: absolute;
-            top: 10px;
+            top: 0px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(60, 60, 60, 0.7);
@@ -177,6 +233,16 @@
             user-select: none;
             z-index: 9000;
         }
+        #version {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            pointer-events: none;
+            user-select: none;
+            z-index: 9001;
+        }
 
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -190,35 +256,71 @@
         <div id="tab-buttons">
             <button class="tab-button active" onclick="openTab('objects')">Objects</button>
             <button class="tab-button" onclick="openTab('tools')">Tools</button>
+            <button class="tab-button" onclick="openTab('settings')">Settings</button>
         </div>
         <div id="objects-tab" class="tab-content active">
-            <button onclick="spawnShape('circle')">Spawn Circle</button>
-            <button onclick="spawnShape('square')">Spawn Square</button>
-            <button onclick="spawnShape('rectangle')">Spawn Rectangle</button>
-            <button onclick="spawnShape('triangle')">Spawn Triangle</button>
+            <button onclick="spawnShape('circle')">Circle</button>
+            <button onclick="spawnShape('square')">Square</button>
+            <button onclick="spawnShape('rectangle')">Rectangle</button>
+            <button onclick="spawnShape('triangle')">Triangle</button>
+            <button onclick="spawnShape('star')">Star</button>
+            <button onclick="spawnShape('pentagon')">Pentagon</button>
+            <button onclick="spawnShape('hexagon')">Hexagon</button>
+            <button onclick="spawnShape('heptagon')">Heptagon</button>
+            <button onclick="spawnShape('octagon')">Octagon</button>
+            <button onclick="spawnShape('nonagon')">Nonagon</button>
+            <button onclick="spawnShape('decagon')">Decagon</button>
         </div>
+
         <div id="tools-tab" class="tab-content">
-            <button onclick="toggleMode('weld')">Toggle Weld Mode</button>
-            <span id="weld-indicator" class="mode-indicator"></span>
-            <button onclick="toggleMode('unweld')">Toggle Unweld Mode</button>
-            <span id="unweld-indicator" class="mode-indicator"></span>
-            <button onclick="toggleMode('delete')">Toggle Delete Mode</button>
-            <span id="delete-indicator" class="mode-indicator"></span>
+            <div class="tool-container">
+                <button onclick="toggleMode('weld')">Toggle Weld Mode</button>
+                <span id="weld-indicator" class="mode-indicator"></span>
+            </div>
+            <div class="tool-container">
+                <button onclick="toggleMode('unweld')">Toggle Unweld Mode</button>
+                <span id="unweld-indicator" class="mode-indicator"></span>
+            </div>
+            <div class="tool-container">
+                <button onclick="toggleMode('delete')">Toggle Delete Mode</button>
+                <span id="delete-indicator" class="mode-indicator"></span>
+            </div>
             <button onclick="clearAll()">Clear All</button>
+        </div>
+        
+        <div id="settings-tab" class="tab-content">
+            <div class="slider-container">
+                <label for="gravity-slider">Gravity:</label>
+                <input type="range" id="gravity-slider" min="0" max="10" step="0.5" value="1" oninput="updateGravity()">
+                <span id="gravity-value" class="slider-value">1</span>
+            </div>
         </div>
     </div>
     <button id="toggle-controls" onclick="toggleControls()"></button>
     <div id="property-controls">
         <h3>Object Properties</h3>
-        <label for="mass-slider">Mass:</label><br>
-        <input type="range" id="mass-slider" min="1" max="100" value="1" oninput="updateSelectedObject()"><br><br><br>
-        <label for="size-slider">Size:</label><br>
-        <input type="range" id="size-slider" min="10" max="150" value="30" oninput="updateSelectedObject()"><br><br><br>
-        <label for="bounciness-slider">Bounciness:</label><br>
-        <input type="range" id="bounciness-slider" min="0" max="2" step="0.1" value="0.6" oninput="updateSelectedObject()">
-        <div id="bounciness-warning">Warning: High bounciness may cause objects to fly around!</div><br><br><br>
-        <label for="friction-slider">Friction:</label><br>
-        <input type="range" id="friction-slider" min="0" max="1" step="0.05" value="0.1" oninput="updateSelectedObject()">
+        <div class="slider-container">
+            <label for="mass-slider">Mass:</label>
+            <input type="range" id="mass-slider" min="1" max="100" value="1" oninput="updateSliderValue('mass')">
+            <span id="mass-value" class="slider-value">1</span>
+        </div>
+        <div class="slider-container">
+            <label for="size-slider">Size:</label>
+            <input type="range" id="size-slider" min="10" max="150" value="30" oninput="updateSliderValue('size')">
+            <span id="size-value" class="slider-value">30</span>
+        </div>
+        <div class="slider-container">
+            <label for="bounciness-slider">Bounciness:</label>
+            <input type="range" id="bounciness-slider" min="0" max="2" step="0.1" value="0.6" oninput="updateSliderValue('bounciness')">
+            <span id="bounciness-value" class="slider-value">0.6</span>
+        </div>
+        <div class="slider-container">
+            <label for="friction-slider">Friction:</label>
+            <input type="range" id="friction-slider" min="0" max="1" step="0.1" value="0.1" oninput="updateSliderValue('friction')">
+            <span id="friction-value" class="slider-value">0.1</span>
+        </div>
+        <button onclick="applyProperties()">Apply Properties</button>
+        <div id="bounciness-warning">Warning: High bounciness may cause objects to fly around!</div>
     </div>
 
     <!-- Pop-up HTML -->
@@ -234,6 +336,8 @@
     </div>
 
     <div id="watermark">fianalins</div>
+
+    <div id="version">v0.1.1</div>
 
     <script>
         const Engine = Matter.Engine,
@@ -341,19 +445,47 @@
             const options = {
                 restitution: 0.6,
                 friction: 0.1,
-                frictionAir: 0.001 // Set initial air friction
+                frictionAir: 0.001
             };
 
-            if (type === 'circle') {
-                shape = Bodies.circle(x, y, 30, options);
-            } else if (type === 'square') {
-                shape = Bodies.rectangle(x, y, 60, 60, options);
-            } else if (type === 'rectangle') {
-                shape = Bodies.rectangle(x, y, 120, 60, options);
-                shape.isRectangle = true;
-            } else if (type === 'triangle') {
-                shape = Bodies.polygon(x, y, 3, 35, options);
-                shape.isTriangle = true;
+            switch (type) {
+                case 'circle':
+                    shape = Bodies.circle(x, y, 30, options);
+                    break;
+                case 'square':
+                    shape = Bodies.rectangle(x, y, 60, 60, options);
+                    break;
+                    case 'rectangle':
+                    shape = Bodies.rectangle(x, y, 60, 30, options); // Changed from 120, 60 to 60, 30
+                    shape.isRectangle = true;
+                    break;
+                case 'triangle':
+                    shape = Bodies.polygon(x, y, 3, 35, options);
+                    shape.isTriangle = true;
+                    break;
+                case 'star':
+                    shape = createStar(x, y, 5, 30, 15, options);
+                    break;
+                case 'pentagon':
+                    shape = Bodies.polygon(x, y, 5, 30, options);
+                    break;
+                case 'hexagon':
+                    shape = Bodies.polygon(x, y, 6, 30, options);
+                    break;
+                case 'heptagon':
+                    shape = Bodies.polygon(x, y, 7, 30, options);
+                    break;
+                case 'octagon':
+                    shape = Bodies.polygon(x, y, 8, 30, options);
+                    break;
+                case 'nonagon':
+                    shape = Bodies.polygon(x, y, 9, 30, options);
+                    break;
+                case 'decagon':
+                    shape = Bodies.polygon(x, y, 10, 30, options);
+                    break;
+                default:
+                    shape = Bodies.rectangle(x, y, 60, 60, options);
             }
 
             shape.render.lineWidth = 0;
@@ -363,6 +495,19 @@
             
             objects.push(shape);
             World.add(world, shape);
+        }
+
+        function createStar(x, y, points, outerRadius, innerRadius, options) {
+            const angle = Math.PI / points;
+            const vertices = [];
+            for (let i = 0; i < points * 2; i++) {
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                vertices.push({
+                    x: x + radius * Math.cos(i * angle),
+                    y: y + radius * Math.sin(i * angle)
+                });
+            }
+            return Bodies.fromVertices(x, y, [vertices], options);
         }
 
         function toggleMode(mode) {
@@ -469,14 +614,70 @@
         function updatePropertyControls() {
             if (selectedObject) {
                 document.getElementById('mass-slider').value = selectedObject.mass;
+                document.getElementById('mass-value').textContent = selectedObject.mass.toFixed(1);
+                
+                let size;
                 if (selectedObject.circleRadius) {
-                    document.getElementById('size-slider').value = selectedObject.circleRadius * 2;
+                    size = selectedObject.circleRadius * 2;
                 } else {
-                    document.getElementById('size-slider').value = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                    size = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
                 }
+                document.getElementById('size-slider').value = size;
+                document.getElementById('size-value').textContent = size.toFixed(1);
+                
                 document.getElementById('bounciness-slider').value = selectedObject.restitution;
+                document.getElementById('bounciness-value').textContent = selectedObject.restitution.toFixed(1);
+                
                 document.getElementById('friction-slider').value = selectedObject.friction;
+                document.getElementById('friction-value').textContent = selectedObject.friction.toFixed(1);
             }
+        }
+
+        function updateSliderValue(property) {
+            const slider = document.getElementById(`${property}-slider`);
+            const value = document.getElementById(`${property}-value`);
+            value.textContent = parseFloat(slider.value).toFixed(1);
+
+            if (property === 'bounciness') {
+                if (parseFloat(slider.value) > 1) {
+                    document.getElementById('bounciness-warning').classList.add('visible');
+                } else {
+                    document.getElementById('bounciness-warning').classList.remove('visible');
+                }
+            }
+        }
+
+        function applyProperties() {
+            if (selectedObject) {
+                const newMass = parseFloat(document.getElementById('mass-slider').value);
+                const newSize = parseFloat(document.getElementById('size-slider').value);
+                const newBounciness = parseFloat(document.getElementById('bounciness-slider').value);
+                const newFriction = parseFloat(document.getElementById('friction-slider').value);
+
+                Matter.Body.setMass(selectedObject, newMass);
+                Matter.Body.set(selectedObject, "restitution", newBounciness);
+                Matter.Body.set(selectedObject, "friction", newFriction);
+                Matter.Body.set(selectedObject, "frictionAir", newFriction * 0.01);
+
+                if (selectedObject.circleRadius) {
+                    const scale = newSize / (selectedObject.circleRadius * 2);
+                    Matter.Body.scale(selectedObject, scale, scale);
+                } else if (selectedObject.isRectangle) {
+                    const currentWidth = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                    const scale = newSize / currentWidth;
+                    Matter.Body.scale(selectedObject, scale, scale);
+                } else {
+                    const currentSize = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                    const scale = newSize / currentSize;
+                    Matter.Body.scale(selectedObject, scale, scale);
+                }
+            }
+        }
+
+        function updateGravity() {
+            const gravityValue = parseFloat(document.getElementById('gravity-slider').value);
+            engine.world.gravity.y = gravityValue;
+            document.getElementById('gravity-value').textContent = gravityValue.toFixed(1);
         }
 
         function updateSelectedObject() {
@@ -563,14 +764,15 @@
             Matter.Body.setPosition(walls[2], Vector.create(-wallThickness / 2, render.options.height / 2));
             Matter.Body.setPosition(walls[3], Vector.create(render.options.width + wallThickness / 2, render.options.height / 2));
 
-            Matter.Body.scale(walls[0], render.options.width / walls[0].bounds.max.x, 1);
-            Matter.Body.scale(walls[1], render.options.width / walls[1].bounds.max.x, 1);
-            Matter.Body.scale(walls[2], 1, render.options.height / walls[2].bounds.max.y);
-            Matter.Body.scale(walls[3], 1, render.options.height / walls[3].bounds.max.y);
+            Matter.Body.setVertices(walls[0], Matter.Vertices.fromPath(`0 0 ${render.options.width} 0 ${render.options.width} ${wallThickness} 0 ${wallThickness}`));
+            Matter.Body.setVertices(walls[1], Matter.Vertices.fromPath(`0 0 ${render.options.width} 0 ${render.options.width} ${wallThickness} 0 ${wallThickness}`));
+            Matter.Body.setVertices(walls[2], Matter.Vertices.fromPath(`0 0 ${wallThickness} 0 ${wallThickness} ${render.options.height} 0 ${render.options.height}`));
+            Matter.Body.setVertices(walls[3], Matter.Vertices.fromPath(`0 0 ${wallThickness} 0 ${wallThickness} ${render.options.height} 0 ${render.options.height}`));
         }
 
         window.addEventListener('resize', resizeCanvas);
         document.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('load', resizeCanvas);
     </script>
 </body>
 </html>
