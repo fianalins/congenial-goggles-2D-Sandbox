@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shapes tab is now a grid
 - Tools tab now has better spacing
 - Windows title to match GitHub
+- Welcome text to match updates
 ## Fixed
 - Walls now size properly when maximizing the window
 
