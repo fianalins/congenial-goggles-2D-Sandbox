@@ -164,6 +164,16 @@
         .popup-content button:hover {
             background: #555;
         }
+        #watermark {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            pointer-events: none;
+            user-select: none;
+            z-index: 9000;
+        }
 
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -211,7 +221,7 @@
     <!-- Pop-up HTML -->
     <div id="info-popup" class="popup">
         <div class="popup-content">
-            <h2>Welcome to my 2D Physics Sandbox!</h2>
+            <h2>Welcome to the congenial-goggles 2D Sandbox!</h2>
             <p>In this little page, you can spawn 4 different shapes, as well as change the properties, Weld, and Freeze objects!<br>
                 You can currently change Mass, Size, Bouncieness, and Friction<br>
                 To Freeze objects, simply hold the object and press 'F'. Select it again to unfreeze.<br>
@@ -219,6 +229,8 @@
             <button id="close-popup" onclick="closePopup()">Okay</button>
         </div>
     </div>
+
+    <div id="watermark">fianalins</div>
 
     <script>
         const Engine = Matter.Engine,
@@ -478,7 +490,7 @@
 
                 // Show warning if bounciness is high
                 const warningElement = document.getElementById('bounciness-warning');
-                if (newBounciness > 1.6) {
+                if (newBounciness > 1) {
                     warningElement.classList.add('visible');
                 } else {
                     warningElement.classList.remove('visible');

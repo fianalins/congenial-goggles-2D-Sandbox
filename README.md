@@ -36,7 +36,7 @@ F - Freezes/unfreezes objects while being held/selected
 Left MB - Drags objects, selects them
 
 ## Bugs, kind of
-Does not affect gameplay
+Some bugs that I'm too lazy to figure out (for now maybe)
 
 ### Selecting Objects
 Sometimes, when deselecting an object (mainly when clicking in whitespace, haven't had it happen when clicking a different object), the object previously selected will stay highlighted, but not actually selected.
@@ -47,6 +47,11 @@ To remove the highlight, click the object again.
 Sometimes, when freezing an object, then selecting a different object, the frozen object will stay highlighted green even though it is not selected.
 
 To fix this, click the object again, then it will return to blue.
+
+### Wall Borders
+Probably due to the way I made it, the walls don't scale properly when pressing the maximize button.
+
+This works fine with resizing the window normally.
 
 ## Credit(s)
 Programmer - fianalins (me)
