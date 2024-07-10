@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Physics Sandbox</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        #controls {
+            position: absolute;
+            top: -200px; /* Start off-screen */
+            left: 0;
+            right: 0;
+            background: rgba(40, 40, 40, 0.7);
+            padding: 10px;
+            transition: top 0.3s ease-in-out;
+        }
+        #controls.visible {
+            top: 0;
+        }
+        #tab-buttons {
+            margin-bottom: 10px;
+        }
+        .tab-button {
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #444;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            color: #ffffff;
+        }
+        .tab-button.active {
+            background: #666;
+        }
+        .tab-content {
+            display: none;
+            background: rgba(60, 60, 60, 0.7);
+            padding: 10px;
+            border-radius: 0 5px 5px 5px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #property-controls {
+            position: absolute;
+            top: 50%;
+            right: -250px;
+            transform: translateY(-50%);
+            background: rgba(40, 40, 40, 0.7);
+            padding: 10px;
+            border-radius: 5px 0 0 5px;
+            width: 230px;
+            transition: right 0.3s ease-in-out;
+        }
+        #property-controls.visible {
+            right: 0;
+        }
+        #bounciness-warning {
+            display: none;
+            position: absolute;
+            background-color: #FFFF87;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        /* Add a transition for smooth fade in/out */
+        #bounciness-warning.visible {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        .mode-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 5px;
+            background-color: #FF6666;
+        }
+        .mode-indicator.active {
+            background-color: #07EDA2;
+        }
+        #toggle-controls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(60, 60, 60, 0.7);
+            border: none;
+            border-radius: 0 0 5px 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            color: #ffffff;
+        }
+        #toggle-controls::after {
+            content: '▼';
+            display: inline-block;
+            transition: transform 0.3s ease-in-out;
+        }
+        #toggle-controls.active::after {
+            transform: rotate(180deg);
+        }
+        button {
+            background: #444;
+            color: #ffffff;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+        input[type="range"] {
+            width: 100%;
+            background: #444;
+        }
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .popup-content {
+            background: rgba(40, 40, 40, 0.7);
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .popup-content h2 {
+            margin-top: 0;
+        }
+        .popup-content button {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .popup-content button:hover {
+            background: #555;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="controls">
+        <div id="tab-buttons">
+            <button class="tab-button active" onclick="openTab('objects')">Objects</button>
+            <button class="tab-button" onclick="openTab('tools')">Tools</button>
+        </div>
+        <div id="objects-tab" class="tab-content active">
+            <button onclick="spawnShape('circle')">Spawn Circle</button>
+            <button onclick="spawnShape('square')">Spawn Square</button>
+            <button onclick="spawnShape('rectangle')">Spawn Rectangle</button>
+            <button onclick="spawnShape('triangle')">Spawn Triangle</button>
+        </div>
+        <div id="tools-tab" class="tab-content">
+            <button onclick="toggleMode('weld')">Toggle Weld Mode</button>
+            <span id="weld-indicator" class="mode-indicator"></span>
+            <button onclick="toggleMode('unweld')">Toggle Unweld Mode</button>
+            <span id="unweld-indicator" class="mode-indicator"></span>
+            <button onclick="toggleMode('delete')">Toggle Delete Mode</button>
+            <span id="delete-indicator" class="mode-indicator"></span>
+            <button onclick="clearAll()">Clear All</button>
+        </div>
+    </div>
+    <button id="toggle-controls" onclick="toggleControls()"></button>
+    <div id="property-controls">
+        <h3>Object Properties</h3>
+        <label for="mass-slider">Mass:</label><br>
+        <input type="range" id="mass-slider" min="1" max="100" value="1" oninput="updateSelectedObject()"><br><br><br>
+        <label for="size-slider">Size:</label><br>
+        <input type="range" id="size-slider" min="10" max="150" value="30" oninput="updateSelectedObject()"><br><br><br>
+        <label for="bounciness-slider">Bounciness:</label><br>
+        <input type="range" id="bounciness-slider" min="0" max="2" step="0.1" value="0.6" oninput="updateSelectedObject()">
+        <div id="bounciness-warning">Warning: High bounciness may cause objects to fly around!</div><br><br><br>
+        <label for="friction-slider">Friction:</label><br>
+        <input type="range" id="friction-slider" min="0" max="1" step="0.05" value="0.1" oninput="updateSelectedObject()">
+    </div>
+
+    <!-- Pop-up HTML -->
+    <div id="info-popup" class="popup">
+        <div class="popup-content">
+            <h2>Welcome to my 2D Physics Sandbox!</h2>
+            <p>In this little page, you can spawn 4 different shapes, as well as change the properties, Weld, and Freeze objects!<br>
+                You can currently change Mass, Size, Bouncieness, and Friction<br>
+                To Freeze objects, simply hold the object and press 'F'. Select it again to unfreeze.<br>
+                Please enjoy this tiny sandbox and support me and what I do! -fianalins</p>
+            <button id="close-popup" onclick="closePopup()">Okay</button>
+        </div>
+    </div>
+
+    <script>
+        const Engine = Matter.Engine,
+              Render = Matter.Render,
+              Runner = Matter.Runner,
+              World = Matter.World,
+              Bodies = Matter.Bodies,
+              Mouse = Matter.Mouse,
+              MouseConstraint = Matter.MouseConstraint,
+              Composite = Matter.Composite,
+              Constraint = Matter.Constraint,
+              Vector = Matter.Vector;
+
+        const engine = Engine.create({
+            enableSleeping: false,
+            gravity: { x: 0, y: 1, scale: 0.001 }
+        });
+        engine.world.gravity.scale = 0.001;
+        engine.world.airFriction = 0; // Set default air friction to 0
+
+        const world = engine.world;
+
+        const render = Render.create({
+            element: document.getElementById('canvas-container'),
+            engine: engine,
+            options: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                wireframes: false
+            }
+        });
+
+        Render.run(render);
+
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+
+        const mouse = Mouse.create(render.canvas);
+        const mouseConstraint = MouseConstraint.create(engine, {
+            mouse: mouse,
+            constraint: {
+                stiffness: 0.2,
+                render: {
+                    visible: false
+                }
+            }
+        });
+
+        World.add(world, mouseConstraint);
+        render.mouse = mouse;
+
+        const wallThickness = 50;
+        const walls = [
+            Bodies.rectangle(render.options.width / 2, -wallThickness / 2, render.options.width, wallThickness, { isStatic: true }),
+            Bodies.rectangle(render.options.width / 2, render.options.height + wallThickness / 2, render.options.width, wallThickness, { isStatic: true }),
+            Bodies.rectangle(-wallThickness / 2, render.options.height / 2, wallThickness, render.options.height, { isStatic: true }),
+            Bodies.rectangle(render.options.width + wallThickness / 2, render.options.height / 2, wallThickness, render.options.height, { isStatic: true })
+        ];
+
+        World.add(world, walls);
+
+        let objects = [];
+        let constraints = [];
+        let selectedObject = null;
+        let currentMode = null;
+        let weldStart = null;
+
+        Matter.Events.on(engine, 'afterUpdate', fadeOutlines);
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Show the pop-up when the page is loaded
+            document.getElementById('info-popup').style.display = 'flex';
+        });
+
+        function closePopup() {
+            // Hide the pop-up
+            document.getElementById('info-popup').style.display = 'none';
+        }
+        
+        function toggleControls() {
+            const controls = document.getElementById('controls');
+            const toggleButton = document.getElementById('toggle-controls');
+            controls.classList.toggle('visible');
+            toggleButton.classList.toggle('active');
+        }
+
+        function openTab(tabName) {
+            const tabs = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            const buttons = document.getElementsByClassName('tab-button');
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove('active');
+            }
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function spawnShape(type) {
+            const x = Math.random() * (render.options.width - 100) + 50;
+            const y = Math.random() * (render.options.height - 100) + 50;
+            let shape;
+
+            const options = {
+                restitution: 0.6,
+                friction: 0.1,
+                frictionAir: 0.001 // Set initial air friction
+            };
+
+            if (type === 'circle') {
+                shape = Bodies.circle(x, y, 30, options);
+            } else if (type === 'square') {
+                shape = Bodies.rectangle(x, y, 60, 60, options);
+            } else if (type === 'rectangle') {
+                shape = Bodies.rectangle(x, y, 120, 60, options);
+                shape.isRectangle = true;
+            } else if (type === 'triangle') {
+                shape = Bodies.polygon(x, y, 3, 35, options);
+                shape.isTriangle = true;
+            }
+
+            shape.render.lineWidth = 0;
+            shape.render.strokeStyle = shape.render.fillStyle;
+            shape.isSelected = false;
+            shape.isFrozen = false;
+            
+            objects.push(shape);
+            World.add(world, shape);
+        }
+
+        function toggleMode(mode) {
+            if (currentMode === mode) {
+                currentMode = null;
+            } else {
+                currentMode = mode;
+            }
+            weldStart = null;
+            updateModeIndicators();
+        }
+
+        function updateModeIndicators() {
+            const modes = ['weld', 'unweld', 'delete'];
+            modes.forEach(mode => {
+                const indicator = document.getElementById(`${mode}-indicator`);
+                if (currentMode === mode) {
+                    indicator.classList.add('active');
+                } else {
+                    indicator.classList.remove('active');
+                }
+            });
+        }
+
+        function clearAll() {
+            objects.forEach(obj => World.remove(world, obj));
+            constraints.forEach(constraint => World.remove(world, constraint));
+            objects = [];
+            constraints = [];
+            selectedObject = null;
+            document.getElementById('property-controls').classList.remove('visible');
+        }
+
+        function handleObjectClick(clickedBody) {
+            if (currentMode === 'weld') {
+                if (!weldStart) {
+                    weldStart = clickedBody;
+                } else if (weldStart !== clickedBody) {
+                    const constraint = Constraint.create({
+                        bodyA: weldStart,
+                        bodyB: clickedBody,
+                        stiffness: 0.5
+                    });
+                    World.add(world, constraint);
+                    constraints.push(constraint);
+                    weldStart = null;
+                }
+            } else if (currentMode === 'unweld') {
+                const connectedConstraints = constraints.filter(c =>
+                    (c.bodyA === clickedBody || c.bodyB === clickedBody));
+                connectedConstraints.forEach(c => {
+                    World.remove(world, c);
+                    constraints = constraints.filter(constraint => constraint !== c);
+                });
+            } else if (currentMode === 'delete') {
+                World.remove(world, clickedBody);
+                objects = objects.filter(obj => obj !== clickedBody);
+                const connectedConstraints = constraints.filter(c =>
+                    (c.bodyA === clickedBody || c.bodyB === clickedBody));
+                connectedConstraints.forEach(c => {
+                    World.remove(world, c);
+                    constraints = constraints.filter(constraint => constraint !== c);
+                });
+            } else {
+                // Toggle selection
+                if (selectedObject && selectedObject !== clickedBody) {
+                    selectedObject.isSelected = false;
+                    updateObjectOutline(selectedObject);
+                }
+                clickedBody.isSelected = !clickedBody.isSelected;
+                selectedObject = clickedBody.isSelected ? clickedBody : null;
+                updateObjectOutline(clickedBody);
+                updatePropertyControls();
+                
+                if (selectedObject) {
+                    document.getElementById('property-controls').classList.add('visible');
+                } else {
+                    document.getElementById('property-controls').classList.remove('visible');
+                }
+            }
+        }
+
+        function selectObject(event) {
+            const mousePosition = mouse.position;
+            const clickedBody = Matter.Query.point(objects, mousePosition)[0];
+
+            if (clickedBody) {
+                handleObjectClick(clickedBody);
+            } else {
+                if (selectedObject) {
+                    selectedObject.render.strokeStyle = selectedObject.render.fillStyle;
+                }
+                selectedObject = null;
+                document.getElementById('property-controls').classList.remove('visible');
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'f' || event.key === 'F') {
+                freezeSelectedObject();
+            }
+        }
+
+        function updatePropertyControls() {
+            if (selectedObject) {
+                document.getElementById('mass-slider').value = selectedObject.mass;
+                if (selectedObject.circleRadius) {
+                    document.getElementById('size-slider').value = selectedObject.circleRadius * 2;
+                } else {
+                    document.getElementById('size-slider').value = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                }
+                document.getElementById('bounciness-slider').value = selectedObject.restitution;
+                document.getElementById('friction-slider').value = selectedObject.friction;
+            }
+        }
+
+        function updateSelectedObject() {
+            if (selectedObject) {
+                const newMass = parseFloat(document.getElementById('mass-slider').value);
+                const newSize = parseFloat(document.getElementById('size-slider').value);
+                const newBounciness = parseFloat(document.getElementById('bounciness-slider').value);
+                const newFriction = parseFloat(document.getElementById('friction-slider').value);
+
+                Matter.Body.setMass(selectedObject, newMass);
+                Matter.Body.set(selectedObject, "restitution", newBounciness);
+                Matter.Body.set(selectedObject, "friction", newFriction);
+                Matter.Body.set(selectedObject, "frictionAir", newFriction * 0.01);
+
+                // Show warning if bounciness is high
+                const warningElement = document.getElementById('bounciness-warning');
+                if (newBounciness > 1.6) {
+                    warningElement.classList.add('visible');
+                } else {
+                    warningElement.classList.remove('visible');
+                }
+
+                if (selectedObject.circleRadius) {
+                    const scale = newSize / (selectedObject.circleRadius * 2);
+                    Matter.Body.scale(selectedObject, scale, scale);
+                } else if (selectedObject.isRectangle) {
+                    const currentWidth = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                    const currentHeight = selectedObject.bounds.max.y - selectedObject.bounds.min.y;
+                    const aspectRatio = currentWidth / currentHeight;
+                    const scaleX = newSize / currentWidth;
+                    const scaleY = scaleX; // Keep the same scale for both dimensions
+                    Matter.Body.scale(selectedObject, scaleX, scaleY);
+                } else if (selectedObject.isTriangle) {
+                    const currentSize = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                    const scale = newSize / currentSize;
+                    Matter.Body.scale(selectedObject, scale, scale);
+                } else {
+                    const currentSize = selectedObject.bounds.max.x - selectedObject.bounds.min.x;
+                    const scale = newSize / currentSize;
+                    Matter.Body.scale(selectedObject, scale, scale);
+                }
+            }
+        }
+
+        function freezeSelectedObject() {
+            if (selectedObject) {
+                Matter.Body.setStatic(selectedObject, !selectedObject.isStatic);
+                selectedObject.isFrozen = selectedObject.isStatic;
+                updateObjectOutline(selectedObject);
+            }
+        }
+
+        function updateObjectOutline(body) {
+            if (body.isSelected || body.isFrozen) {
+                body.render.lineWidth = 6; // Increased from 3 to 6
+                body.render.strokeStyle = body.isSelected ? '#00ff00' : '#0000FF';
+            } else {
+                body.render.lineWidth = 0; // Increased from 2 to 4
+                body.render.strokeStyle = body.render.fillStyle;
+            }
+        }
+
+        function fadeOutlines() {
+            objects.forEach(obj => {
+                if (obj.isSelected || obj.isFrozen) {
+                    const alpha = Math.sin(engine.timing.timestamp * 0.005) * 0.5 + 0.5; // Slowed down the fading
+                    const baseColor = obj.isSelected ? [7, 237, 162] : [14, 119, 234];
+                    const color = `rgba(${baseColor[0]}, ${baseColor[1]}, ${baseColor[2]}, ${alpha})`;
+                    obj.render.strokeStyle = color;
+                }
+            });
+        }
+
+        render.canvas.addEventListener('mousedown', selectObject);
+
+        function resizeCanvas() {
+            render.canvas.width = window.innerWidth;
+            render.canvas.height = window.innerHeight;
+            render.options.width = window.innerWidth;
+            render.options.height = window.innerHeight;
+
+            Matter.Body.setPosition(walls[0], Vector.create(render.options.width / 2, -wallThickness / 2));
+            Matter.Body.setPosition(walls[1], Vector.create(render.options.width / 2, render.options.height + wallThickness / 2));
+            Matter.Body.setPosition(walls[2], Vector.create(-wallThickness / 2, render.options.height / 2));
+            Matter.Body.setPosition(walls[3], Vector.create(render.options.width + wallThickness / 2, render.options.height / 2));
+
+            Matter.Body.scale(walls[0], render.options.width / walls[0].bounds.max.x, 1);
+            Matter.Body.scale(walls[1], render.options.width / walls[1].bounds.max.x, 1);
+            Matter.Body.scale(walls[2], 1, render.options.height / walls[2].bounds.max.y);
+            Matter.Body.scale(walls[3], 1, render.options.height / walls[3].bounds.max.y);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        document.addEventListener('keydown', handleKeyDown);
+    </script>
+</body>
+</html>
